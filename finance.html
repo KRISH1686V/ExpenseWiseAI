@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ExpenseWise AI - Smart Expense Management</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+/* Dark mode overrides */
+body.dark { background-color: #1f2937; color: #f3f4f6; }
+body.dark header, body.dark .bg-white { background-color: #374151; color: #f3f4f6; }
+body.dark .bg-blue-50 { background-color: #1e3a8a; color: #dbeafe; }
+body.dark .bg-red-100 { background-color: #7f1d1d; color: #fecaca; }
+body.dark .bg-green-50 { background-color: #14532d; color: #bbf7d0; }
+</style>
+</head>
+<body class="bg-gray-50">
+
+<!-- Budget & Savings Modal -->
+<div id="budgetModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-96 dark:bg-gray-800">
+        <h3 class="text-xl font-semibold mb-4">Set Your Budget & Savings Goal</h3>
+        <div class="mb-4">
+            <label class="block text-gray-700 dark:text-gray-200">Total Budget (INR)</label>
+            <input id="budgetInput" type="number" step="0.01" min="0" class="w-full p-2 border rounded" placeholder="Enter total budget">
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 dark:text-gray-200">Savings Goal (INR)</label>
+            <input id="savingsInput" type="number" step="0.01" min="0" class="w-full p-2 border rounded" placeholder="Enter savings goal">
+        </div>
+        <div class="flex justify-end space-x-2">
+            <button id="setBudgetBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Set Budget</button>
+        </div>
+    </div>
+</div>
+
+<!-- Header -->
+<header class="bg-blue-600 text-white p-4 shadow-md">
+    <div class="container mx-auto flex justify-between items-center">
+        <h1 class="text-2xl font-bold">ExpenseWise AI</h1>
+        <nav>
+            <a href="#dashboard" class="px-3 py-2 rounded hover:bg-blue-700">Dashboard</a>
+            <a href="#expenses" class="px-3 py-2 rounded hover:bg-blue-700">Expenses</a>
+            <a href="#reports" class="px-3 py-2 rounded hover:bg-blue-700">Reports</a>
+            <a href="#insights" class="px-3 py-2 rounded hover:bg-blue-700">AI Insights</a>
+            <button id="darkModeToggle" class="ml-2 px-2 py-1 bg-gray-200 text-black rounded hover:bg-dark bg-blue-50 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-700">
+                <img src="dark.png" alt="Toggle Dark Mode" class="h-5 w-5 hidden">
+                <img src="light.png" alt="Toggle Light Mode" class="h-5 w-5 ">
+            </button>
+        </nav>
+    </div>
+</header>
+
+<main class="container mx-auto p-4 mt-8">
+    <!-- Dashboard Section -->
+    <section id="dashboard" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white p-6 rounded-lg shadow-md col-span-1">
+            <h2 class="text-xl font-semibold mb-4">Monthly Summary</h2>
+            <div class="space-y-4">
+                <div>
+                    <p class="text-gray-600">Total Budget</p>
+                    <p id="totalBudget" class="text-2xl font-bold">₹0.00</p>
+                </div>
+                <div>
+                    <p class="text-gray-600">Savings Goal</p>
+                    <p id="savingsGoal" class="text-2xl font-bold text-blue-600">₹0.00</p>
+                </div>
+                <div>
+                    <p class="text-gray-600">Spending Budget</p>
+                    <p id="spendingBudget" class="text-2xl font-bold">₹0.00</p>
+                </div>
+                <div id="budgetRemainingContainer">
+                    <p class="text-gray-600">Budget Remaining</p>
+                    <p id="budgetRemaining" class="text-2xl font-bold text-green-600">₹0.00</p>
+                </div>
+                <div>
+                    <p class="text-gray-600">Total Spent</p>
+                    <p id="totalSpent" class="text-2xl font-bold">₹0.00</p>
+                </div>
+                <button id="clearExpensesBtn" class="mt-4 bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm">Clear All Expenses</button>
+                <button id="updateBudgetBtn" class="mt-2 bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm">Update Budget</button>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md col-span-2">
+            <h2 class="text-xl font-semibold mb-4">Spending Trends</h2>
+            <canvas id="spendingChart" height="200"></canvas>
+        </div>
+    </section>
+
+    <!-- Expenses Section -->
+    <section id="expenses" class="mt-8 bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-xl font-semibold mb-4">Add Expense</h2>
+        <form id="expenseForm" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-200">Amount (INR)</label>
+                    <input id="amount" type="number" step="0.01" class="w-full p-2 border rounded" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-200">Category</label>
+                    <select id="category" class="w-full p-2 border rounded" required>
+                        <option value="">Select Category</option>
+                        <option>Food & Dining</option>
+                        <option>Transportation</option>
+                        <option>Entertainment</option>
+                        <option>Utilities</option>
+                        <option>Shopping</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-gray-700 dark:text-gray-200">Date</label>
+                    <input id="date" type="date" class="w-full p-2 border rounded" required>
+                </div>
+            </div>
+            <div>
+                <label class="block text-gray-700 dark:text-gray-200">Description</label>
+                <input id="description" type="text" class="w-full p-2 border rounded" placeholder="e.g. 'Dinner at Italian Restaurant'" required>
+            </div>
+            <button type="submit" id="addExpenseBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add Expense</button>
+        </form>
+        <div class="mt-6">
+            <h3 class="text-lg font-semibold mb-2">Recent Expenses</h3>
+            <ul id="expenseList" class="space-y-2 text-sm"></ul>
+        </div>
+    </section>
+
+    <!-- Reports Section -->
+    <section id="reports" class="mt-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-4">Expense Distribution</h2>
+                <div class="flex justify-center">
+                    <canvas id="pieChart" width="300" height="300"></canvas>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-4">AI Insights</h2>
+                <div id="insightsContent" class="space-y-4">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <p>Set your budget to start tracking expenses and get AI insights!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script>
+let expenses = JSON.parse(localStorage.getItem("expenses")) || [];
+let totalBudget = parseFloat(localStorage.getItem("totalBudget")) || 0;
+let savings = parseFloat(localStorage.getItem("savings")) || 0;
+let spendingBudget = totalBudget - savings;
+
+let spendingChart = null;
+let pieChart = null;
+
+// Pop-up function
+function showSpendingAlert(){
+    alert("⚠️ You have reached your budget limit!");
+}
+
+function updateInsights(totalSpent){
+    const insightsDiv = document.getElementById("insightsContent");
+    insightsDiv.innerHTML = "";
+
+    if(spendingBudget <= 0 || totalBudget === 0){
+        insightsDiv.innerHTML = `<div class="bg-red-100 p-4 rounded-lg text-red-700">Set your budget to start tracking expenses!</div>`;
+        return;
+    }
+
+    const categoryTotals = {};
+    expenses.forEach(e => categoryTotals[e.category] = (categoryTotals[e.category]||0) + e.amount);
+    const remaining = spendingBudget - totalSpent;
+
+    // Spending limit warnings inside insights
+    if(remaining <= 0 && expenses.length > 0){
+        insightsDiv.innerHTML += `<div class="bg-red-100 p-4 rounded-lg text-red-700">⚠️ You have reached your budget limit!</div>`;
+    } else if(remaining / spendingBudget < 0.2){
+        insightsDiv.innerHTML += `<div class="bg-red-100 p-4 rounded-lg text-red-700">⚠️ You're close to reaching your budget!</div>`;
+    }
+
+    // Top category spent
+    const sortedCategories = Object.entries(categoryTotals).sort((a,b)=>b[1]-a[1]);
+    if(sortedCategories.length > 0){
+        const [topCategory, amount] = sortedCategories[0];
+        insightsDiv.innerHTML += `<div class="bg-blue-50 p-4 rounded-lg text-blue-700">💡 You are spending most on ${topCategory} (₹${amount.toFixed(2)}). Consider managing this category better.</div>`;
+    }
+
+    // Suggest increasing savings if extra money left
+    if(remaining > savings && remaining > 0){
+        insightsDiv.innerHTML += `<div class="bg-green-50 p-4 rounded-lg text-green-700">💡 You have extra unspent money! Consider increasing your savings goal by ₹${(remaining-savings).toFixed(2)}.</div>`;
+    }
+
+    if(sortedCategories.length === 0){
+        insightsDiv.innerHTML += `<div class="bg-green-50 p-4 rounded-lg text-green-700">💡 Add your expenses to get personalized AI insights!</div>`;
+    }
+}
+
+function updateCharts(){
+    if(spendingChart) spendingChart.destroy();
+    if(pieChart) pieChart.destroy();
+
+    const recentExpenses = expenses.slice(-7).reverse();
+    const ctx = document.getElementById('spendingChart').getContext('2d');
+    spendingChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: recentExpenses.map(e => `${e.date} - ${e.description.substring(0,15)}${e.description.length>15?'...':''}`),
+            datasets: [{ label: 'Expenses', data: recentExpenses.map(e=>e.amount), backgroundColor: 'rgba(59,130,246,0.5)', borderColor: 'rgba(59,130,246,1)', borderWidth:1 }]
+        },
+        options: { responsive:true, scales:{ y:{ beginAtZero:true } } }
+    });
+
+    const pieCtx = document.getElementById('pieChart').getContext('2d');
+    const categories = {};
+    expenses.forEach(e => { categories[e.category] = (categories[e.category]||0) + e.amount; });
+    const pieLabels = Object.keys(categories).length ? Object.keys(categories) : ['No expenses yet'];
+    const pieData = Object.values(categories).length ? Object.values(categories) : [1];
+    const pieColors = ['rgba(255,99,132,0.7)','rgba(54,162,235,0.7)','rgba(255,206,86,0.7)','rgba(75,192,192,0.7)','rgba(153,102,255,0.7)','rgba(255,159,64,0.7)'];
+    pieChart = new Chart(pieCtx, { type:'pie', data:{ labels:pieLabels, datasets:[{ data:pieData, backgroundColor: pieColors, borderWidth:1 }] }, options:{ responsive:false, maintainAspectRatio:false } });
+}
+
+function updateDashboard(){
+    let totalSpent = expenses.reduce((sum,e)=>sum+e.amount,0);
+    let remaining = spendingBudget - totalSpent;
+
+    // Update dashboard numbers
+    document.getElementById("totalBudget").textContent = `₹${totalBudget.toFixed(2)}`;
+    document.getElementById("savingsGoal").textContent = `₹${savings.toFixed(2)}`;
+    document.getElementById("spendingBudget").textContent = `₹${spendingBudget.toFixed(2)}`;
+    document.getElementById("totalSpent").textContent = `₹${totalSpent.toFixed(2)}`;
+    document.getElementById("budgetRemaining").textContent = `₹${remaining.toFixed(2)}`;
+
+    // Update recent expenses list
+    let list = document.getElementById("expenseList");
+    list.innerHTML = "";
+    expenses.slice(-5).reverse().forEach(e=>{
+        let li = document.createElement("li");
+        li.textContent = `${e.date} - ${e.category}: ₹${e.amount.toFixed(2)} (${e.description})`;
+        list.appendChild(li);
+    });
+
+    // Update charts & insights
+    updateCharts();
+    updateInsights(totalSpent);
+
+    // Pop-up **only if totalBudget is set AND remaining is exactly zero**
+    if(totalBudget > 0 && remaining === 0 && expenses.length > 0){
+        showSpendingAlert();
+    }
+}
+
+// ===== Event Listeners =====
+document.getElementById("setBudgetBtn").addEventListener("click", function() {
+    const budgetVal = parseFloat(document.getElementById("budgetInput").value);
+    const savingsVal = parseFloat(document.getElementById("savingsInput").value);
+    if(!isNaN(budgetVal) && budgetVal >=0 && !isNaN(savingsVal) && savingsVal>=0 && savingsVal<=budgetVal){
+        totalBudget = budgetVal;
+        savings = savingsVal;
+        spendingBudget = totalBudget - savings;
+        localStorage.setItem("totalBudget", totalBudget);
+        localStorage.setItem("savings", savings);
+        document.getElementById('budgetModal').classList.add('hidden');
+        updateDashboard();
+    } else {
+        alert("Please enter valid budget and savings values (Savings ≤ Budget).");
+    }
+});
+
+document.getElementById("updateBudgetBtn").addEventListener("click", function() {
+    document.getElementById('budgetModal').classList.remove('hidden');
+    document.getElementById("budgetInput").value = totalBudget;
+    document.getElementById("savingsInput").value = savings;
+});
+
+document.getElementById("expenseForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    const amount = parseFloat(document.getElementById("amount").value);
+    const category = document.getElementById("category").value;
+    const date = document.getElementById("date").value;
+    const description = document.getElementById("description").value.trim();
+    if(isNaN(amount) || amount<=0 || !category || !date || !description) { alert("Please enter valid expense"); return; }
+    expenses.push({amount, category, date, description});
+    localStorage.setItem("expenses", JSON.stringify(expenses));
+    this.reset();
+    document.getElementById("date").value = new Date().toISOString().split('T')[0];
+    updateDashboard();
+});
+
+document.getElementById("clearExpensesBtn").addEventListener("click", function(){
+    if(confirm("Are you sure you want to clear all expenses?")){
+        expenses = [];
+        localStorage.setItem("expenses", JSON.stringify(expenses));
+        updateDashboard();
+    }
+});
+
+document.getElementById("date").value = new Date().toISOString().split('T')[0];
+if(totalBudget<=0) document.getElementById('budgetModal').classList.remove('hidden');
+updateDashboard();
+
+// Dark mode toggle
+document.getElementById("darkModeToggle").addEventListener("click", function(){
+    document.body.classList.toggle("dark");
+});
+</script>
+
+</body>
+</html>
