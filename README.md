@@ -1,0 +1,1 @@
+This personal finance tracker smartly records and categorizes all your expenses, giving clear insights into your spending habits. It also visualizes your income and expenses, helping you manage money more effectively.
